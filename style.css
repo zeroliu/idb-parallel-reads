@@ -1,0 +1,14 @@
+#reads {
+  margin-top: 20px;
+  display: flex;
+  gap: 20px;
+}
+
+.section {
+  border: 1px solid #aaaaaa;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
