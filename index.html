@@ -9,10 +9,11 @@
 
 <body>
   <h1>IndexedDB Parallel Reads</h1>
-  <p>Click <b>Write data</b> button to fill the test database with mock data. Then start one or multiple read streams
-    and compare the read speed.</p>
-  <p>Each read stream runs 10000 sequential read requests.</p>
+  <p>Click <b>Write data</b> button to fill the test database with mock data when running this demo for the first time.
+  <p>Then start one or multiple read streams and compare the read speed. Each read stream runs 10000 sequential read
+    requests.</p>
   <button id="writeData">Write data</button>
+  <input type="number" max=10 min=1 id="streamCount" value=5>
   <div id="reads"></div>
   <script src="script.js"></script>
 </body>

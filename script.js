@@ -1,27 +1,34 @@
 const writeBtn = document.getElementById('writeData');
 const readsContainer = document.getElementById('reads');
+const streamInput = document.getElementById('streamCount');
 
 const DB_NAME = 'test_db';
 const SHARD = 10000;
-const STREAMS = 5;
 
 writeBtn.addEventListener('click', () => {
   writeData();
 });
+streamInput.addEventListener('input', () => {
+  generateStreams();
+})
 
-for (let i = 1; i <= STREAMS; ++i) {
-  const section = document.createElement('div');
-  section.className = 'section';
-  section.innerHTML = `
+function generateStreams() {
+  const streams = streamInput.value;
+  readsContainer.innerHTML = '';
+  for (let i = 1; i <= streams; ++i) {
+    const section = document.createElement('div');
+    section.className = 'section';
+    section.innerHTML = `
     <button class="read-btn">Read stream ${i}</button>
     <div class="speed">N/A</div>
     <div class="progress">N/A</div>
   `;
-  readsContainer.appendChild(section);
-  const readBtn = section.querySelector('.read-btn');
-  readBtn.addEventListener('click', () => {
-    readData(`stream ${i}`, (i - 1) * SHARD, i * SHARD, section);
-  });
+    readsContainer.appendChild(section);
+    const readBtn = section.querySelector('.read-btn');
+    readBtn.addEventListener('click', () => {
+      readData(`stream ${i}`, (i - 1) * SHARD, i * SHARD, section);
+    });
+  }
 }
 
 function openDb() {
@@ -93,3 +100,5 @@ function readDataInternal(
         requestCount + 1);
   };
 }
+
+generateStreams();
