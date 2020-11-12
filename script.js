@@ -1,6 +1,8 @@
 const writeBtn = document.getElementById('writeData');
 const readsContainer = document.getElementById('reads');
 const streamInput = document.getElementById('streamCount');
+const withDataEl = document.getElementById('withData');
+const withoutDataEl = document.getElementById('withoutData');
 
 const DB_NAME = 'test_db';
 const SHARD = 10000;
@@ -9,10 +11,10 @@ writeBtn.addEventListener('click', () => {
   writeData();
 });
 streamInput.addEventListener('input', () => {
-  generateStreams();
+  renderStreams();
 })
 
-function generateStreams() {
+function renderStreams() {
   const streams = streamInput.value;
   readsContainer.innerHTML = '';
   for (let i = 1; i <= streams; ++i) {
@@ -47,18 +49,33 @@ function openDb() {
   });
 }
 
+function generateString(sizeInKb) {
+  return new Array(Math.floor((sizeInKb * 1024) / 4 + 1)).join('abcd');
+}
+
 async function writeData() {
-  console.log('Writing data to indexedDB...');
+  writeBtn.hidden = true;
+  const writeStatusEl = document.getElementById('writeStatus');
+  writeStatusEl.textContent = 'Generating test data...';
   const db = await openDb();
   const transaction = db.transaction('store', 'readwrite');
   const store = transaction.objectStore('store');
   const start = performance.now();
-  for (let i = 0; i < 100000; ++i) {
-    store.add(`data - ${i}`);
+  let writeCount = 0;
+  for (let i = 0; i < SHARD * 10; ++i) {
+    const request = store.add(`data - ${i}: ${generateString(1)}`);
+    request.onsuccess = () => {
+      writeCount++;
+      const progress = Math.round(writeCount / SHARD / 10 * 100);
+      requestAnimationFrame(() => {
+        writeStatusEl.textContent = `${progress}%`;
+      });
+    };
   }
   transaction.oncomplete = () => {
     console.log(
         `write completed. Took ${Math.round(performance.now() - start)}ms`);
+    renderRead();
   }
 }
 
@@ -101,4 +118,35 @@ function readDataInternal(
   };
 }
 
-generateStreams();
+function isDbReady() {
+  return new Promise(async (resolve) => {
+    const db = await openDb();
+    const transaction = db.transaction('store', 'readonly');
+    const store = transaction.objectStore('store');
+    const request = store.count();
+    request.onsuccess = () => {
+      if (request.result >= SHARD * 10) {
+        resolve(true);
+      } else {
+        resolve(false);
+      }
+    }
+  });
+}
+
+function renderRead() {
+  withDataEl.hidden = false;
+  withoutDataEl.hidden = true;
+  renderStreams();
+}
+
+async function run() {
+  if (!await isDbReady()) {
+    withDataEl.hidden = true;
+    withoutDataEl.hidden = false;
+  } else {
+    renderRead();
+  }
+}
+
+run();
