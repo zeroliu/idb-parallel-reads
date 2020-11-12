@@ -3,6 +3,8 @@ const readsContainer = document.getElementById('reads');
 const streamInput = document.getElementById('streamCount');
 const withDataEl = document.getElementById('withData');
 const withoutDataEl = document.getElementById('withoutData');
+const startAllReadsBtn = document.getElementById('startAllReads');
+const fpsEl = document.getElementById('fps');
 
 const DB_NAME = 'test_db';
 const SHARD = 10000;
@@ -13,6 +15,9 @@ writeBtn.addEventListener('click', () => {
 streamInput.addEventListener('input', () => {
   renderStreams();
 })
+startAllReadsBtn.addEventListener('click', () => {
+  startAllReads();
+});
 
 function renderStreams() {
   const streams = streamInput.value;
@@ -84,15 +89,15 @@ async function readData(name, startIndex, endIndex, section) {
   const db = await openDb();
   const transaction = db.transaction('store', 'readonly');
   const store = transaction.objectStore('store');
-  const start = performance.now();
+  const startMs = performance.now();
   const speedEl = section.querySelector('.speed');
   const progressEl = section.querySelector('.progress');
-  readDataInternal(startIndex, endIndex, store, start, speedEl, progressEl);
+  readDataInternal(startIndex, endIndex, store, startMs, speedEl, progressEl);
   transaction.oncomplete = () => {
     const now = performance.now();
-    console.log(
-        `Read from ${startIndex} completed. Took ${Math.round(now - start)}ms`);
-    const speed = (now - start) / (endIndex - startIndex);
+    console.log(`Read from ${startIndex} completed. Took ${
+        Math.round(now - startMs)}ms`);
+    const speed = (now - startMs) / (endIndex - startIndex);
     speedEl.textContent = `${speed.toFixed(2)} ms/request`;
   }
 }
@@ -104,18 +109,28 @@ function readDataInternal(
     return;
   }
   if (requestCount % 100 === 0) {
-    const speed = (performance.now() - startMs) / 100;
-    speedEl.textContent = `${speed.toFixed(2)} ms/request`;
-    startMs = performance.now();
+    const current = performance.now();
+    const speed = (current - startMs) / 100;
+    startMs = current;
+    const progress = Math.round(requestCount / SHARD * 100);
+    requestAnimationFrame(() => {
+      speedEl.textContent = `${speed.toFixed(2)} ms/request`;
+      progressEl.textContent = `${progress}%`;
+    });
   }
-  const progress = Math.round(requestCount / SHARD * 100);
-  progressEl.textContent = `${progress}%`;
   const request = store.get(currentIndex);
   request.onsuccess = () => {
     readDataInternal(
         currentIndex + 1, endIndex, store, startMs, speedEl, progressEl,
         requestCount + 1);
   };
+}
+
+function startAllReads() {
+  const btns = document.querySelectorAll('.read-btn');
+  for (const btn of btns) {
+    btn.click();
+  }
 }
 
 function isDbReady() {
@@ -149,4 +164,22 @@ async function run() {
   }
 }
 
+let tick = performance.now();
+const fpsList = [];
+function renderFps() {
+  requestAnimationFrame(() => {
+    const now = performance.now();
+    const fps = 1000 / (now - tick);
+    tick = now;
+    fpsList.push(fps);
+    if (fpsList.length >= 5) {
+      fpsEl.textContent = Math.round(
+          fpsList.reduce((sum, current) => sum + current) / fpsList.length);
+      fpsList.length = 0;
+    }
+    renderFps();
+  });
+}
+
 run();
+renderFps();
